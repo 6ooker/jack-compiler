@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import re
+
 # keywords:         class constructor function method field static var int char
 #                   boolean void true false null this let do if else while return
 # symbols:          { } ( ) [ ] . , ; + - * / & | < > = ~
@@ -15,13 +17,57 @@ class JackTokenizer:
     IDENTIFIER = 4
 
     def __init__(self, infile) -> None:
-        self.infile = infile
-    
-    def hasMoreTokens(self):
+        file = open(infile, 'r')
+        self._lines = file.read()
+        self.removeComments()
+        self.current_token = ''
+        self._init_token_info()
+
+    def __str__(self) -> str:
         pass
+    
+    def _init_token_info(self):
+        self._tokenType = -1
+    
+    def hasMoreTokens(self) -> bool:
+        return self._tokens != []
     
     def advance(self):
-        pass
+        self._init_token_info()
+        self.current_token = self._tokens.pop(0)
+        
+    def removeComments(self):
+        currentIndex = 0
+        endIndex = 0
+        filteredText = ''
+        
+        while currentIndex < len(self._lines):
+            currentChar = self._lines[currentIndex]
+            
+            if currentChar == "\"":
+                endIndex = self._lines.find("\"", currentIndex + 1)
+                filteredText += self._lines[currentIndex:endIndex+1]
+                currentIndex = endIndex + 1
+                
+            elif currentChar == "/":
+                if self._lines[currentIndex + 1] == "/":
+                    endIndex = self._lines.find("\n", currentIndex + 1)
+                    currentIndex = endIndex + 1
+                    filteredText += " "
+                elif self._lines[currentIndex + 1] == "*":
+                    endIndex = self._lines.find("*/", currentIndex + 1)
+                    currentIndex = endIndex + 2
+                    filteredText += " "
+                else:
+                    filteredText += self._lines[currentIndex]
+                    currentIndex += 1
+            else:
+                filteredText += self._lines[currentIndex]
+                currentIndex += 1
+        self._lines = filteredText
+        return
+    
+    
     
     def tokenType(self):
         pass
@@ -42,3 +88,6 @@ class JackTokenizer:
     def stringVal(self):
         pass
     
+
+j = JackTokenizer('./Main.jack')
+print(j._lines)
