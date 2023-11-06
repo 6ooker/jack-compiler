@@ -10,31 +10,25 @@ import re
 # identifier:       sequence of letters, digits and underscore _ not starting w/ digit
 
 class JackTokenizer:
-    KEYWORD = 0
-    SYMBOL = 1
-    INTCONST = 2
-    STRCONST = 3
-    IDENTIFIER = 4
+    KeywordsCodes = {"class", "constructor", "function", "method", "field", "static", "var", "int", "char", "boolean", "void", "true", "false", "null", "this", "let", "do", "if", "else", "while", "return"}
+    SymbolsCodes = {'{', '}', '(', ')', '[', ']', '.', ',', ';', '+', '-', '*', '/', '&', '|', '<', '>', '=', '~'}
 
     def __init__(self, infile) -> None:
         file = open(infile, 'r')
         self._lines = file.read()
         self.removeComments()
+        self.tokens = self.tokenize()
         self.current_token = ''
-        self._init_token_info()
 
     def __str__(self) -> str:
         pass
     
-    def _init_token_info(self):
-        self._tokenType = -1
-    
     def hasMoreTokens(self) -> bool:
-        return self._tokens != []
+        return self.tokens != []
     
     def advance(self):
-        self._init_token_info()
-        self.current_token = self._tokens.pop(0)
+        self.current_token = self.tokens.pop(0)
+        return self.current_token
         
     def removeComments(self):
         currentIndex = 0
@@ -68,26 +62,29 @@ class JackTokenizer:
         return
     
     
+    keywordsRegex = '(?!\w)|'.join(KeywordsCodes) + '(?!\w)'
+    symbolsRegex = '[' + re.escape('|'.join(SymbolsCodes)) + ']'
+    integersRegex = r'\d+'
+    stringsRegex = r'"[^"\n]*"'
+    identifiersRegex = r'[\w]+'
+    word = re.compile(keywordsRegex + '|' + symbolsRegex + '|' + integersRegex + '|' + stringsRegex + '|' + identifiersRegex)
+    
+    def token(self, word):
+        if re.match(self.keywordsRegex, word) != None: return ("keyword", word)
+        elif re.match(self.symbolsRegex, word) != None: return ("symbol", word)
+        elif re.match(self.integersRegex, word) != None: return ("integerConstant", word)
+        elif re.match(self.stringsRegex, word) != None: return ("stringConstant", word[1:-1])
+        else:                                           return ("identifier", word)
+    
+    def tokenize(self):
+        return [self.token(word) for word in self.split(self._lines)]
+    
+    def split(self, line):
+        return self.word.findall(line)
     
     def tokenType(self):
-        pass
+        return self.current_token[0]
     
+    def tokenValue(self):
+        return self.current_token[1]
     
-    def keyWord(self):
-        pass
-    
-    def symbol(self):
-        pass
-    
-    def identifier(self):
-        pass
-    
-    def intVal(self):
-        pass
-    
-    def stringVal(self):
-        pass
-    
-
-j = JackTokenizer('./Main.jack')
-print(j._lines)
