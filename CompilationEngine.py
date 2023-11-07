@@ -50,22 +50,85 @@ class CompilationEngine:
         self.outf.write(self.indent+"</"+rule+">\n")
     
     def compileClass(self):
-        pass
+        self.writeNonTerminalOpen("class")
+        
+        self.advance() # get class
+        self.advance() # get className
+        self.advance() # get '{'
+        if self.existClassVarDec():
+            self.compileClassVarDec()
+        while self.existSubroutine():
+            self.compileSubroutine()
+        self.advance() # get '}'
+        
+        self.writeNonTerminalClose()
+        self.outf.close()
     
     def compileClassVarDec(self):
-        pass
+        while self.existClassVarDec():
+            self.writeNonTerminalOpen("classVarDec")
+            self.writeClassVarDec()
+            self.writeNonTerminalClose()
+    
+    def writeClassVarDec(self):
+        self.advance() # get static / field
+        self.advance() # get type
+        self.advance() # get varName
+        while self.nextValueIs(','):
+            self.advance() # get ','
+            self.advance() # get varName
+        self.advance() # get ';'
     
     def compileSubroutine(self):
-        pass
+        self.writeNonTerminalOpen("subroutineDec")
+        
+        self.advance() # get constructor / function / method
+        self.advance() # get void or type
+        self.advance() # get subroutineName
+        self.advance() #get '('
+        self.compileParameterList()
+        self.advance() # get ')'
+        self.compileSubroutineBody()
+        
+        self.writeNonTerminalClose()
     
     def compileParameterList(self):
-        pass
+        self.writeNonTerminalOpen("parameterList")
+        
+        while self.existParam():
+            self.writeParam()
+        
+        self.writeNonTerminalClose()
+    
+    def writeParam(self):
+        self.advance() # get type
+        self.advance() # get varName
+        if self.nextValueIs(','):
+            self.advance() # get ','
     
     def compileSubroutineBody(self):
-        pass
+        self.writeNonTerminalOpen("subroutineBody")
+        
+        self.advance() # get '{'
+        while self.existVarDec():
+            self.compileVarDec()
+        self.compileStatements()
+        self.advance() # get '}'
+        
+        self.writeNonTerminalClose()
     
     def compileVarDec(self):
-        pass
+        self.writeNonTerminalOpen("varDec")
+        
+        self.advance() # get var
+        self.advance() # get type
+        self.advance() # get varName
+        while self.nextValueIs(','):
+            self.advance() # get ','
+            self.advance() # get varName
+        self.advance() # get ';'
+        
+        self.writeNonTerminalClose()
     
     def compileStatements(self):
         self.writeNonTerminalOpen("statements")
@@ -128,7 +191,7 @@ class CompilationEngine:
         
         self.advance() # get do
         self.compileSubroutineCall()
-        self.advacne() # get ';'
+        self.advance() # get ';'
         
         self.writeNonTerminalClose()
     
@@ -232,6 +295,18 @@ class CompilationEngine:
         return self.nextValueIs("let") or self.nextValueIs("if") or\
                 self.nextValueIs("while") or self.nextValueIs("do") or\
                 self.nextValueIs("return")
+    
+    def existClassVarDec(self):
+        return self.nextValueIs("static") or self.nextValueIs("field")
+    
+    def existSubroutine(self):
+        return self.nextValueIs("constructor") or self.nextValueIs("function") or self.nextValueIs("method")
+    
+    def existParam(self):
+        return not self.nextTokenIs("symbol")
+    
+    def existVarDec(self):
+        return self.nextValueIs("var")
     
     def nextValueIs(self, val):
         token, value = self.token.peek()
