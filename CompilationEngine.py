@@ -68,7 +68,16 @@ class CompilationEngine:
         pass
     
     def compileStatements(self):
-        pass
+        self.writeNonTerminalOpen("statements")
+        
+        while self.existStatement():
+            if self.nextValueIs("let"): self.compileLet()
+            if self.nextValueIs("if"): self.compileIf()
+            if self.nextValueIs("while"): self.compileWhile()
+            if self.nextValueIs("do"): self.compileDo()
+            if self.nextValueIs("return"): self.compileReturn()
+        
+        self.writeNonTerminalClose()
     
     def compileLet(self):
         pass
@@ -162,6 +171,11 @@ class CompilationEngine:
         return self.nextTokenIs("integerConstant") or self.nextTokenIs("stringConstant") or\
                 (self.nextValueIn(self.keywordConstant)) or self.nextTokenIs("identifier") or\
                 (self.nextValueIn(self.unaryOp)) or self.nextValueIs("(")
+    
+    def existStatement(self):
+        return self.nextValueIs("let") or self.nextValueIs("if") or\
+                self.nextValueIs("while") or self.nextValueIs("do") or\
+                self.nextValueIs("return")
     
     def nextValueIs(self, val):
         token, value = self.token.peek()
