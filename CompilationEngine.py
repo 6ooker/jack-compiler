@@ -16,8 +16,38 @@ import jackTokenizer as Tokenizer
 
 class CompilationEngine:
     
+    binaryOp = {'+', '-', '*', '/', '&amp;', '|', '&lt;', '&gt;', '='}
+    unaryOp = {'-', '~'}
+    keywordConstant = {'true', 'false', 'null', 'this'}
+    
     def __init__(self, infile, outfile) -> None:
-        self.tok = Tokenizer.JackTokenizer(infile)
+        self.token = Tokenizer.JackTokenizer(infile)
+        self.outf = open(outfile, 'w')
+        self.alreadyParsedRules = []
+        self.indent = ""
+    
+    def addIndent(self):
+        self.indent += "    "
+    
+    def rmIndent(self):
+        self.indent = self.indent[:-4]
+    
+    def advance(self):
+        token, value = self.token.advance()
+        self.writeTerminal(token, value)
+        
+    def writeTerminal(self, token, value):
+        self.outf.write(self.indent+"<"+token+"> "+value+" </"+token+">\n")
+    
+    def writeNonTerminalOpen(self, rule):
+        self.outf.write(self.indent+"<"+rule+">\n")
+        self.alreadyParsedRules.append(rule)
+        self.addIndent()
+    
+    def writeNonTerminalClose(self):
+        self.rmIndent()
+        rule = self.alreadyParsedRules.pop()
+        self.outf.write(self.indent+"</"+rule+">\n")
     
     def compileClass(self):
         pass
@@ -55,18 +85,93 @@ class CompilationEngine:
     def compileReturn(self):
         pass
     
+    # expression: term(op term)*
     def compileExpression(self):
-        pass
+        self.writeNonTerminalOpen("expression")
+        
+        self.compileTerm()
+        if self.nextValueIn(self.binaryOp):
+            self.advance() # get Op token
+            self.compileTerm()
+            
+        self.writeNonTerminalClose()
     
+    # term: integerConstant | stringConstant | keywordconstant | varName |
+    #       varName '['expression']' | subroutineCall | '('expression')' | unaryOp term
     def compileTerm(self):
-        pass
+        self.writeNonTerminalOpen("term")
+        
+        if self.nextTokenIs("integerConstant") or\
+            self.nextTokenIs("stringConstant") or \
+            self.nextValueIn(self.keywordConstant):
+                
+                self.advance() # get constant
+                
+        elif self.nextTokenIs("identifier"):
+            
+            self.advance() # get varName / subroutineCall
+            
+            if self.nextValueIs("["):
+                self.writeArrayIndex()
+                
+            if self.nextValueIs("("):
+                self.advance() # get (
+                self.compileExpressionList()
+                self.advance() # get )
+            
+            if self.nextValueIs("."):
+                self.advance() # get '.'
+                self.advance() # get subroutineName
+                self.advance() # get (
+                self.compileExpressionList()
+                self.advance() # get )
+                
+        elif self.nextValueIs("("):
+            self.advance() # get (
+            self.compileExpression()
+            self.advance() # get )
+            
+        elif self.nextValueIn(self.unaryOp):
+            self.advance() # get unaryOp
+            self.compileTerm()
+        
+        self.writeNonTerminalClose()
+    
+    def writeArrayIndex(self):
+        self.advance() # get [
+        self.compileExpression()
+        self.advance() # get ]
     
     def compileExpressionList(self):
-        pass
+        self.writeNonTerminalOpen("expressionList")
+        
+        if self.existExpression():
+            self.compileExpression()
+        while self.nextValueIs(","):
+            self.advance() # consume ',' symbol
+            self.compileExpression()
+        
+        self.writeNonTerminalClose()
+        
     
-    def eat(self, string):
-        if (not string in self.tok.current_token):
-            raise Exception("Token Error")
-        else:
-            self.tok.advance()
+    def existExpression(self):
+        return self.existTerm()
+    
+    def existTerm(self):
+        token, value = self.token.peek()
+        return self.nextTokenIs("integerConstant") or self.nextTokenIs("stringConstant") or\
+                (self.nextValueIn(self.keywordConstant)) or self.nextTokenIs("identifier") or\
+                (self.nextValueIn(self.unaryOp)) or self.nextValueIs("(")
+    
+    def nextValueIs(self, val):
+        token, value = self.token.peek()
+        return value == val
+
+    def nextTokenIs(self, tok):
+        token, value = self.token.peek()
+        return token == tok
+    
+    def nextValueIn(self, _list):
+        token, value = self.token.peek()
+        return value in _list
 
