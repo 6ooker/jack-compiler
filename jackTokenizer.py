@@ -100,3 +100,8 @@ class JackTokenizer:
     def tokenValue(self):
         return self.current_token[1]
     
+    def peek(self):
+        if self.hasMoreTokens():
+            return self.tokens[0]
+        else:
+            return ("ERROR", 0)
