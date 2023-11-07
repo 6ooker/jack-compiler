@@ -80,19 +80,76 @@ class CompilationEngine:
         self.writeNonTerminalClose()
     
     def compileLet(self):
-        pass
+        self.writeNonTerminalOpen("letStatement")
+        
+        self.advance() # get 'let'
+        self.advance() # get varName
+        if self.nextValueIs("["):
+            self.writeArrayIndex() # if array get it
+        self.advance() # get '='
+        self.compileExpression()
+        self.advance() # get ';'
+        
+        self.writeNonTerminalClose()
     
     def compileIf(self):
-        pass
+        self.writeNonTerminalOpen("ifStatement")
+        
+        self.advance() # get if
+        self.advance() # get '('
+        self.compileExpression()
+        self.advance() # get ')'
+        self.advance() # get '{'
+        self.compileStatements()
+        self.advance() # get '}'
+        if self.nextValueIs("else"):
+            self.advance() # get 'else'
+            self.advance() # get '{'
+            self.compileStatements()
+            self.advance() # get '}'
+        
+        self.writeNonTerminalClose()
     
     def compileWhile(self):
-        pass
+        self.writeNonTerminalOpen("whileStatement")
+        
+        self.advance() # get while
+        self.advance() # get '('
+        self.compileExpression()
+        self.advance() # get ')'
+        self.advance() # get '{'
+        self.compileStatements()
+        self.advance() # get '}'
+        
+        self.writeNonTerminalClose()
     
     def compileDo(self):
-        pass
+        self.writeNonTerminalOpen("doStatement")
+        
+        self.advance() # get do
+        self.compileSubroutineCall()
+        self.advacne() # get ';'
+        
+        self.writeNonTerminalClose()
     
     def compileReturn(self):
-        pass
+        self.writeNonTerminalOpen("returnStatement")
+        
+        self.advance() # get return
+        while self.existExpression():
+            self.compileExpression()
+        self.advance() # get ';'
+        
+        self.writeNonTerminalClose()
+    
+    def compileSubroutineCall(self):
+        self.advance() # get subroutineName / className / varName
+        if self.nextValueIs("."): # case Name.subroutine
+            self.advance() # get '.'
+            self.advance() # get subroutineName
+        self.advance() # get '('
+        self.compileExpressionList()
+        self.advance() # get ')'
     
     # expression: term(op term)*
     def compileExpression(self):
@@ -162,7 +219,6 @@ class CompilationEngine:
         
         self.writeNonTerminalClose()
         
-    
     def existExpression(self):
         return self.existTerm()
     
