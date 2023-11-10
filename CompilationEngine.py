@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
 import jackTokenizer as Tokenizer
+import VMWriter
+import symbolTable
+from JCConstants import *
 
 # program structure:
 # class: 'class' className '{' classVarDec* subroutineDec* '}'
@@ -34,7 +37,7 @@ class CompilationEngine:
     
     def advance(self):
         token, value = self.token.advance()
-        self.writeTerminal(token, value)
+        return (token, value)
         
     def writeTerminal(self, token, value):
         self.outf.write(self.indent+"<"+token+"> "+value+" </"+token+">\n")
@@ -50,7 +53,8 @@ class CompilationEngine:
         self.outf.write(self.indent+"</"+rule+">\n")
     
     def compileClass(self):
-        self.writeNonTerminalOpen("class")
+        # only creation of SymbolTable
+        self.ST = symbolTable.SymbolTable()
         
         self.advance() # get class
         self.advance() # get className
@@ -61,26 +65,30 @@ class CompilationEngine:
             self.compileSubroutine()
         self.advance() # get '}'
         
-        self.writeNonTerminalClose()
+        
         self.outf.close()
     
     def compileClassVarDec(self):
         while self.existClassVarDec():
-            self.writeNonTerminalOpen("classVarDec")
-            self.writeClassVarDec()
-            self.writeNonTerminalClose()
-    
-    def writeClassVarDec(self):
-        self.advance() # get static / field
-        self.advance() # get type
-        self.advance() # get varName
-        while self.nextValueIs(','):
-            self.advance() # get ','
-            self.advance() # get varName
-        self.advance() # get ';'
-    
+            
+            token, kvalue = self.advance() # get static / field
+            if kvalue is 'static': kvalue = STATIC
+            elif kvalue is 'field': kvalue = FIELD
+            token, tvalue = self.advance() # get type
+            stype = tvalue
+            token, nvalue = self.advance() # get varName
+            name = nvalue
+            self.ST.define(name, stype, kvalue)
+            
+            while self.nextValueIs(','):
+                self.advance() # get ','
+                token, nvalue = self.advance() # get varName
+                self.ST.define(nvalue, stype, kvalue)
+            
+            self.advance() # get ';'
+
     def compileSubroutine(self):
-        self.writeNonTerminalOpen("subroutineDec")
+        self.ST.reset() # reset (clear) subroutine-level symbol table
         
         self.advance() # get constructor / function / method
         self.advance() # get void or type
@@ -90,7 +98,6 @@ class CompilationEngine:
         self.advance() # get ')'
         self.compileSubroutineBody()
         
-        self.writeNonTerminalClose()
     
     def compileParameterList(self):
         self.writeNonTerminalOpen("parameterList")
