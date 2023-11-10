@@ -3,35 +3,38 @@
 
 class VMWriter:
     
-    def __init__(self) -> None:
-        pass
+    def __init__(self, filename) -> None:
+        self.outf = open(filename.replace('.jack', '.vm'), "w")
     
     def writePush(self, segment, index):
-        pass
+        self.writeCMD('push', segment, index)
     
     def writePop(self, segment, index):
-        pass
+        self.writeCMD('pop', segment, index)
     
     def writeArithmetic(self, command):
-        pass
+        self.writeCMD(command)
     
     def writeLabel(self, label):
-        pass
+        self.writeCMD('label', label)
     
     def writeGoto(self, label):
-        pass
+        self.writeCMD('goto', label)
     
     def writeIf(self, label):
-        pass
+        self.writeCMD('if-goto', label)
     
     def writeCall(self, name, nArgs):
-        pass
+        self.writeCMD('call', name, nArgs)
     
     def writeFunction(self, name, nVars):
-        pass
+        self.writeCMD('function', name, nVars)
     
     def writeReturn(self):
-        pass
+        self.writeCMD('return')
     
     def close(self):
-        pass
+        self.outf.close()
+    
+    def writeCMD(self, cmd, arg1='', arg2=''):
+        self.outf.write(cmd + ' ' + str(arg1) + ' ' + str(arg2) + '\n')
