@@ -19,7 +19,7 @@ from JCConstants import *
 
 class CompilationEngine:
     
-    binaryOp = {'+', '-', '*', '/', '&amp;', '|', '&lt;', '&gt;', '='}
+    binaryOp = {'+', '-', '*', '/', '&', '|', '<', '>', '='}
     unaryOp = {'-', '~'}
     keywordConstant = {'true', 'false', 'null', 'this'}
     
@@ -57,7 +57,7 @@ class CompilationEngine:
         self.ST = symbolTable.SymbolTable()
         
         self.advance() # get class
-        self.advance() # get className
+        tok, self.className = self.advance() # get className
         self.advance() # get '{'
         if self.existClassVarDec():
             self.compileClassVarDec()
@@ -90,7 +90,9 @@ class CompilationEngine:
     def compileSubroutine(self):
         self.ST.reset() # reset (clear) subroutine-level symbol table
         
-        self.advance() # get constructor / function / method
+        tok, kwd = self.advance() # get constructor / function / method
+        if kwd == 'method':
+            self.ST.define('this', self.className, ARG)
         self.advance() # get void or type
         self.advance() # get subroutineName
         self.advance() #get '('
