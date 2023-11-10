@@ -19,7 +19,6 @@ class JackTokenizer:
         self.current_token = ''
         self.removeComments()
         self.tokens = self.tokenize()
-        self.tokens = self.replaceSymbols()
 
     def __str__(self) -> str:
         pass
@@ -82,17 +81,6 @@ class JackTokenizer:
     
     def split(self, line):
         return self.word.findall(line)
-    
-    def replaceSymbols(self):
-        return [self.replace(pair) for pair in self.tokens]
-    
-    def replace(self, pair):
-        token, value = pair
-        if value == '<': return (token, '&lt;')
-        elif value == '>': return (token, '&gt;')
-        elif value == '"': return (token, '&quot;')
-        elif value == '&': return (token, '&amp;')
-        else: return (token, value)
     
     def tokenType(self):
         return self.current_token[0]
