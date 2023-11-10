@@ -3,7 +3,6 @@
 from JCConstants import *
 
 class SymbolTable:
-
     
     def __init__(self) -> None:
         self.class_symbols = {}
