@@ -23,9 +23,9 @@ class CompilationEngine:
     unaryOp = {'-', '~'}
     keywordConstant = {'true', 'false', 'null', 'this'}
 
-    def __init__(self, infile, outfile) -> None:
+    def __init__(self, infile) -> None:
         self.token = Tokenizer.JackTokenizer(infile)
-        self.outf = open(outfile, 'w')
+        self.writer = VMWriter.VMWriter(infile)
         self.alreadyParsedRules = []
         self.indent = ""
 
@@ -66,7 +66,7 @@ class CompilationEngine:
         self.advance() # get '}'
 
 
-        self.outf.close()
+        self.writer.close()
 
     def compileClassVarDec(self):
         while self.existClassVarDec():
@@ -221,25 +221,38 @@ class CompilationEngine:
 
     # expression: term(op term)*
     def compileExpression(self):
-        self.writeNonTerminalOpen("expression")
 
         self.compileTerm()
         if self.nextValueIn(self.binaryOp):
             self.advance() # get Op token
             self.compileTerm()
 
-        self.writeNonTerminalClose()
 
     # term: integerConstant | stringConstant | keywordconstant | varName |
     #       varName '['expression']' | subroutineCall | '('expression')' | unaryOp term
     def compileTerm(self):
-        self.writeNonTerminalOpen("term")
-
-        if self.nextTokenIs("integerConstant") or\
-            self.nextTokenIs("stringConstant") or \
-            self.nextValueIn(self.keywordConstant):
-
-                self.advance() # get constant
+        
+        if self.nextTokenIs("integerConstant"):
+            tok, val = self.advance() # get constant
+            self.writer.writePush('constant', val)
+            
+        elif self.nextTokenIs("stringConstant"):
+            tok, val = self.advance() # get string
+            self.writer.writePush('constant', len(val)) # push length of string
+            self.writer.writeCall('String.new', 1) # call OS String function w/ 1 argument
+            for c in val:
+                self.writer.writePush('constant', ord(c)) # push Unicode of character
+                self.writer.writeCall('String.appendChar', 2) # call appendChar w/ 2 arguments
+        
+        elif self.nextValueIn(self.keywordConstant):
+            tok, val = self.advance() # get keyword (true/false/null/this)
+            if val == 'true':
+                self.writer.writePush('constant', 1)
+                self.writer.writeArithmetic('neg')
+            elif val == 'this':
+                self.writer.writePush('pointer', 0)
+            else:
+                self.writer.writePush('constant', 0)
 
         elif self.nextTokenIs("identifier"):
 
@@ -269,7 +282,6 @@ class CompilationEngine:
             self.advance() # get unaryOp
             self.compileTerm()
 
-        self.writeNonTerminalClose()
 
     def writeArrayIndex(self):
         self.advance() # get [
