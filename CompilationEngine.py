@@ -223,9 +223,10 @@ class CompilationEngine:
     def compileExpression(self):
 
         self.compileTerm()
-        if self.nextValueIn(self.binaryOp):
-            self.advance() # get Op token
+        while self.nextValueIn(self.binaryOp):
+            tok, op = self.advance()
             self.compileTerm()
+            self.writer.writeArithmetic(arithmetics[op])
 
 
     # term: integerConstant | stringConstant | keywordconstant | varName |
