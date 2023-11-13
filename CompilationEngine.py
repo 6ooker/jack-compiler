@@ -231,11 +231,11 @@ class CompilationEngine:
     # term: integerConstant | stringConstant | keywordconstant | varName |
     #       varName '['expression']' | subroutineCall | '('expression')' | unaryOp term
     def compileTerm(self):
-        
+
         if self.nextTokenIs("integerConstant"):
             tok, val = self.advance() # get constant
             self.writer.writePush('constant', val)
-            
+
         elif self.nextTokenIs("stringConstant"):
             tok, val = self.advance() # get string
             self.writer.writePush('constant', len(val)) # push length of string
@@ -243,7 +243,7 @@ class CompilationEngine:
             for c in val:
                 self.writer.writePush('constant', ord(c)) # push Unicode of character
                 self.writer.writeCall('String.appendChar', 2) # call appendChar w/ 2 arguments
-        
+
         elif self.nextValueIn(self.keywordConstant):
             tok, val = self.advance() # get keyword (true/false/null/this)
             if val == 'true':
@@ -256,22 +256,27 @@ class CompilationEngine:
 
         elif self.nextTokenIs("identifier"):
 
-            self.advance() # get varName / subroutineCall
+            tok, name = self.advance() # get varName / subroutineCall
 
             if self.nextValueIs("["):
                 self.writeArrayIndex()
 
-            if self.nextValueIs("("):
+            elif self.nextValueIs("("):
                 self.advance() # get (
                 self.compileExpressionList()
                 self.advance() # get )
 
-            if self.nextValueIs("."):
+            elif self.nextValueIs("."):
                 self.advance() # get '.'
                 self.advance() # get subroutineName
                 self.advance() # get (
                 self.compileExpressionList()
                 self.advance() # get )
+
+            else:
+                kind = self.ST.kindOf(name)
+                index = self.ST.indexOf(name)
+                self.writer.writePush(segments[kind], index) # push variable onto stack
 
         elif self.nextValueIs("("):
             self.advance() # get (
@@ -279,10 +284,14 @@ class CompilationEngine:
             self.advance() # get )
 
         elif self.nextValueIn(self.unaryOp):
-            self.advance() # get unaryOp
+            tok, op = self.advance() # get unaryOp
             self.compileTerm()
+            if op == '-':
+                self.writer.writeArithmetic('neg')
+            elif op == '~':
+                self.writer.writeArithmetic('not')
 
-
+# TODO: Array handling
     def writeArrayIndex(self):
         self.advance() # get [
         self.compileExpression()
