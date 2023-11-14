@@ -26,31 +26,11 @@ class CompilationEngine:
     def __init__(self, infile) -> None:
         self.token = Tokenizer.JackTokenizer(infile)
         self.writer = VMWriter.VMWriter(infile)
-        self.alreadyParsedRules = []
-        self.indent = ""
-
-    def addIndent(self):
-        self.indent += "    "
-
-    def rmIndent(self):
-        self.indent = self.indent[:-4]
 
     def advance(self):
         token, value = self.token.advance()
         return (token, value)
 
-    def writeTerminal(self, token, value):
-        self.outf.write(self.indent+"<"+token+"> "+value+" </"+token+">\n")
-
-    def writeNonTerminalOpen(self, rule):
-        self.outf.write(self.indent+"<"+rule+">\n")
-        self.alreadyParsedRules.append(rule)
-        self.addIndent()
-
-    def writeNonTerminalClose(self):
-        self.rmIndent()
-        rule = self.alreadyParsedRules.pop()
-        self.outf.write(self.indent+"</"+rule+">\n")
 
     def compileClass(self):
         # only creation of SymbolTable
@@ -136,7 +116,6 @@ class CompilationEngine:
 
 
     def compileStatements(self):
-        self.writeNonTerminalOpen("statements")
 
         while self.existStatement():
             if self.nextValueIs("let"): self.compileLet()
@@ -145,20 +124,34 @@ class CompilationEngine:
             if self.nextValueIs("do"): self.compileDo()
             if self.nextValueIs("return"): self.compileReturn()
 
-        self.writeNonTerminalClose()
-
     def compileLet(self):
-        self.writeNonTerminalOpen("letStatement")
-
         self.advance() # get 'let'
-        self.advance() # get varName
-        if self.nextValueIs("["):
-            self.writeArrayIndex() # if array get it
+        tok, name = self.advance() # get varName
+        array = self.nextValueIs("[")
+        
+        if array:
+            kind = self.ST.kindOf(name)
+            index = self.ST.indexOf(name)
+            self.writer.writePush(segments[kind], index) # push array ptr onto stack
+            self.advance() # get '['
+            self.compileExpression()
+            self.advance() # get ']'
+            self.writer.writeArithmetic('add') # base+index push onto stack
+            
         self.advance() # get '='
         self.compileExpression()
         self.advance() # get ';'
+        
+        if array:
+            self.writer.writePop('temp', 1) # pop expression val into temp
+            self.writer.writePop('pointer', 1) # pop base+index into 'that' register
+            self.writer.writePush('temp', 1) # push expression back onto stack
+            self.writer.writePop('that', 0) # pop value into *(base+index)
+        else:
+            kind = self.ST.kindOf(name)
+            index = self.ST.indexOf(name)
+            self.writer.writePop(segments[kind], index) # pop value directly into variable
 
-        self.writeNonTerminalClose()
 
     def compileIf(self):
         self.writeNonTerminalOpen("ifStatement")
@@ -277,7 +270,7 @@ class CompilationEngine:
                 objName = name
                 self.advance() # get '.'
                 tok, name = self.advance() # get subroutineName
-                
+
                 if stype == None:
                     name = objName+'.'+name # calling using class name
                 else:
@@ -286,7 +279,7 @@ class CompilationEngine:
                     index = self.ST.indexOf(objName)
                     self.writer.writePush(segments[kind], index) # push object pointer onto stack
                     name = self.ST.typeOf(objName)+'.'+name
-                
+
                 self.advance() # get (
                 nArgs += self.compileExpressionList() # VM code to push args
                 self.advance() # get )
@@ -315,18 +308,18 @@ class CompilationEngine:
         kind = self.ST.kindOf(name)
         index = self.ST.indexOf(name)
         self.writer.writePush(segments[kind], index) # push array ptr onto stack
-        
+
         self.advance() # get [
         self.compileExpression() # push index onto stack
         self.advance() # get ]
-        
+
         self.writer.writeArithmetic('add') # base+index
         self.writer.writePop('pointer', 1) # pop into 'that' ptr
         self.writer.writePush('that', 0) # push *(base+index) onto stack
 
     def compileExpressionList(self):
         nArgs = 0
-        
+
         if self.existExpression():
             self.compileExpression()
             nArgs = 1
@@ -334,9 +327,8 @@ class CompilationEngine:
             self.advance() # consume ',' symbol
             self.compileExpression()
             nArgs += 1
-        
-        return nArgs
 
+        return nArgs
 
     def existExpression(self):
         return self.existTerm()
