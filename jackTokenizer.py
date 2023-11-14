@@ -22,27 +22,27 @@ class JackTokenizer:
 
     def __str__(self) -> str:
         pass
-    
+
     def hasMoreTokens(self) -> bool:
         return self.tokens != []
-    
+
     def advance(self):
         self.current_token = self.tokens.pop(0)
         return self.current_token
-        
+
     def removeComments(self):
         currentIndex = 0
         endIndex = 0
         filteredText = ''
-        
+
         while currentIndex < len(self._lines):
             currentChar = self._lines[currentIndex]
-            
+
             if currentChar == "\"":
                 endIndex = self._lines.find("\"", currentIndex + 1)
                 filteredText += self._lines[currentIndex:endIndex+1]
                 currentIndex = endIndex + 1
-                
+
             elif currentChar == "/":
                 if self._lines[currentIndex + 1] == "/":
                     endIndex = self._lines.find("\n", currentIndex + 1)
@@ -60,34 +60,34 @@ class JackTokenizer:
                 currentIndex += 1
         self._lines = filteredText
         return
-    
-    
+
+
     keywordsRegex = '(?!\w)|'.join(KeywordsCodes) + '(?!\w)'
     symbolsRegex = '[' + re.escape('|'.join(SymbolsCodes)) + ']'
     integersRegex = r'\d+'
     stringsRegex = r'"[^"\n]*"'
     identifiersRegex = r'[\w]+'
     word = re.compile(keywordsRegex + '|' + symbolsRegex + '|' + integersRegex + '|' + stringsRegex + '|' + identifiersRegex)
-    
+
     def token(self, word):
         if re.match(self.keywordsRegex, word) != None: return ("keyword", word)
         elif re.match(self.symbolsRegex, word) != None: return ("symbol", word)
         elif re.match(self.integersRegex, word) != None: return ("integerConstant", word)
         elif re.match(self.stringsRegex, word) != None: return ("stringConstant", word[1:-1])
         else:                                           return ("identifier", word)
-    
+
     def tokenize(self):
         return [self.token(word) for word in self.split(self._lines)]
-    
+
     def split(self, line):
         return self.word.findall(line)
-    
+
     def tokenType(self):
         return self.current_token[0]
-    
+
     def tokenValue(self):
         return self.current_token[1]
-    
+
     def peek(self):
         if self.hasMoreTokens():
             return self.tokens[0]

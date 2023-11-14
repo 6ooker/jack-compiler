@@ -17,7 +17,7 @@ def main():
 
         CE = CompilationEngine.CompilationEngine(instream)
         CE.compileClass()
-    
+
     elif os.path.isdir(instream):
         for jackFile in [f for f in os.listdir(instream) if f.endswith('.jack')]:
             infile = os.path.join(instream, jackFile)

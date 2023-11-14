@@ -93,19 +93,19 @@ class CompilationEngine:
         if self.nextValueIs(','):
             self.advance() # get ','
 
-    def compileSubroutineBody(self, kwd):
+    def compileSubroutineBody(self, subName, kwd):
 
         self.advance() # get '{'
         while self.existVarDec():
             self.compileVarDec()
-        self.writeFunctionDec(kwd)
+        self.writeFunctionDec(subName, kwd)
         self.compileStatements()
         self.advance() # get '}'
 
     def writeFunctionDec(self, subName, kwd):
-        self.writer.writeFunction(subName, self.ST.varCount(VAR))
+        self.writer.writeFunction(self.className+'.'+subName, self.ST.varCount(VAR))
         self.loadThisPtr(kwd)
-        
+
     def loadThisPtr(self, kwd):
         if kwd == 'method':
             self.writer.writePush('argument', 0)
