@@ -159,8 +159,37 @@ class CompilationEngine:
 
     def compileIf(self):
         endLabel = self.newLabel()
-        
+
         self.advance() # get if
+        self.advance() # get '('
+        self.compileExpression()
+        self.advance() # get ')'
+
+        self.writer.writeArithmetic('not') # ~(cond)
+        notIfLabel = self.newLabel()
+        self.writer.writeIf(notIfLabel) # if-goto notIfLabel
+
+        self.advance() # get '{'
+        self.compileStatements() # compile if statements
+        self.advance() # get '}'
+
+        self.writer.writeGoto(endLabel) # goto label
+        self.writer.writeLabel(notIfLabel) # label notIfLabel
+
+        if self.nextValueIs("else"):
+            self.advance() # get 'else'
+            self.advance() # get '{'
+            self.compileStatements() # compile else statements
+            self.advance() # get '}'
+
+        self.writer.writeLabel(endLabel) # label endLabel
+
+
+    def compileWhile(self):
+        topLabel = self.newLabel()
+        self.writer.writeLabel(topLabel) # label topLabel
+        
+        self.advance() # get while
         self.advance() # get '('
         self.compileExpression()
         self.advance() # get ')'
@@ -170,33 +199,12 @@ class CompilationEngine:
         self.writer.writeIf(notIfLabel) # if-goto notIfLabel
         
         self.advance() # get '{'
-        self.compileStatements() # compile if statements
-        self.advance() # get '}'
-        
-        self.writer.writeGoto(endLabel) # goto label
-        self.writer.writeLabel(notIfLabel) # label notIfLabel
-        
-        if self.nextValueIs("else"):
-            self.advance() # get 'else'
-            self.advance() # get '{'
-            self.compileStatements() # compile else statements
-            self.advance() # get '}'
-        
-        self.writer.writeLabel(endLabel) # label endLabel
-
-
-    def compileWhile(self):
-        self.writeNonTerminalOpen("whileStatement")
-
-        self.advance() # get while
-        self.advance() # get '('
-        self.compileExpression()
-        self.advance() # get ')'
-        self.advance() # get '{'
         self.compileStatements()
         self.advance() # get '}'
+        
+        self.writer.writeGoto(topLabel) # goto topLabel
+        self.writer.writeLabel(notIfLabel) # label notIfLabel
 
-        self.writeNonTerminalClose()
 
     def compileDo(self):
         self.writeNonTerminalOpen("doStatement")
