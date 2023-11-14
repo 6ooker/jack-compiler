@@ -240,23 +240,14 @@ class CompilationEngine:
 
 
     def compileReturn(self):
-        self.writeNonTerminalOpen("returnStatement")
-
         self.advance() # get return
-        while self.existExpression():
-            self.compileExpression()
+        if not self.nextValueIs(";"):
+            self.compileExpression() # VM code for return expr if any
+        else:
+            self.writer.writePush('constant', 0) # push 0 if not returning any value
         self.advance() # get ';'
+        self.writer.writeReturn()
 
-        self.writeNonTerminalClose()
-
-    def compileSubroutineCall(self):
-        self.advance() # get subroutineName / className / varName
-        if self.nextValueIs("."): # case Name.subroutine
-            self.advance() # get '.'
-            self.advance() # get subroutineName
-        self.advance() # get '('
-        self.compileExpressionList()
-        self.advance() # get ')'
 
     # expression: term(op term)*
     def compileExpression(self):
