@@ -188,32 +188,56 @@ class CompilationEngine:
     def compileWhile(self):
         topLabel = self.newLabel()
         self.writer.writeLabel(topLabel) # label topLabel
-        
+
         self.advance() # get while
         self.advance() # get '('
         self.compileExpression()
         self.advance() # get ')'
-        
+
         self.writer.writeArithmetic('not') # ~(cond)
         notIfLabel = self.newLabel()
         self.writer.writeIf(notIfLabel) # if-goto notIfLabel
-        
+
         self.advance() # get '{'
         self.compileStatements()
         self.advance() # get '}'
-        
+
         self.writer.writeGoto(topLabel) # goto topLabel
         self.writer.writeLabel(notIfLabel) # label notIfLabel
 
 
     def compileDo(self):
-        self.writeNonTerminalOpen("doStatement")
-
         self.advance() # get do
-        self.compileSubroutineCall()
+        tok, name = self.advance() # get subroutineName / className / varName
+        stype = self.ST.typeOf(name)
+
+        if self.nextValueIs("."): # case Name.subroutine
+            self.advance() # get '.'
+            nArgs = 0
+            objName = name
+            tok, name = self.advance() # get subroutineName
+            if stype == None:
+                name = objName+'.'+name # call using class name
+            else:
+                nArgs = 1
+                kind = self.ST.kindOf(objName) # call using object variable name
+                index = self.ST.indexOf(objName)
+                self.writer.writePush(segments[kind], index) # push object ptr onto stack
+                name = stype+'.'+name
+        else:
+            nArgs = 1
+            self.writer.writePush('pointer', 0) # push 'this' ptr
+            name = self.className+'.'+name
+
+        self.advance() # get '('
+        nArgs += self.compileExpressionList() # VM code to push args
+        self.advance() # get ')'
+        self.writer.writeCall(name, nArgs) # call name nArgs
+
+        self.writer.writePop('temp', 0) # pop return value and discard
+
         self.advance() # get ';'
 
-        self.writeNonTerminalClose()
 
     def compileReturn(self):
         self.writeNonTerminalOpen("returnStatement")
