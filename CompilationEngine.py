@@ -128,7 +128,7 @@ class CompilationEngine:
         self.advance() # get 'let'
         tok, name = self.advance() # get varName
         array = self.nextValueIs("[")
-        
+
         if array:
             kind = self.ST.kindOf(name)
             index = self.ST.indexOf(name)
@@ -137,11 +137,11 @@ class CompilationEngine:
             self.compileExpression()
             self.advance() # get ']'
             self.writer.writeArithmetic('add') # base+index push onto stack
-            
+
         self.advance() # get '='
         self.compileExpression()
         self.advance() # get ';'
-        
+
         if array:
             self.writer.writePop('temp', 1) # pop expression val into temp
             self.writer.writePop('pointer', 1) # pop base+index into 'that' register
@@ -152,24 +152,38 @@ class CompilationEngine:
             index = self.ST.indexOf(name)
             self.writer.writePop(segments[kind], index) # pop value directly into variable
 
+    labelCount = 0
+    def newLabel(self):
+        self.labelCount += 1
+        return 'label'+str(self.labelCount)
 
     def compileIf(self):
-        self.writeNonTerminalOpen("ifStatement")
-
+        endLabel = self.newLabel()
+        
         self.advance() # get if
         self.advance() # get '('
         self.compileExpression()
         self.advance() # get ')'
+        
+        self.writer.writeArithmetic('not') # ~(cond)
+        notIfLabel = self.newLabel()
+        self.writer.writeIf(notIfLabel) # if-goto notIfLabel
+        
         self.advance() # get '{'
-        self.compileStatements()
+        self.compileStatements() # compile if statements
         self.advance() # get '}'
+        
+        self.writer.writeGoto(endLabel) # goto label
+        self.writer.writeLabel(notIfLabel) # label notIfLabel
+        
         if self.nextValueIs("else"):
             self.advance() # get 'else'
             self.advance() # get '{'
-            self.compileStatements()
+            self.compileStatements() # compile else statements
             self.advance() # get '}'
+        
+        self.writer.writeLabel(endLabel) # label endLabel
 
-        self.writeNonTerminalClose()
 
     def compileWhile(self):
         self.writeNonTerminalOpen("whileStatement")
