@@ -260,7 +260,7 @@ class CompilationEngine:
             tok, name = self.advance() # get varName / subroutineCall
 
             if self.nextValueIs("["):
-                self.writeArrayIndex()
+                self.writeArrayIndex(name)
 
             elif self.nextValueIs("("):
                 nArgs = 1
@@ -310,11 +310,19 @@ class CompilationEngine:
             elif op == '~':
                 self.writer.writeArithmetic('not')
 
-# TODO: Array handling
-    def writeArrayIndex(self):
+
+    def writeArrayIndex(self, name):
+        kind = self.ST.kindOf(name)
+        index = self.ST.indexOf(name)
+        self.writer.writePush(segments[kind], index) # push array ptr onto stack
+        
         self.advance() # get [
-        self.compileExpression()
+        self.compileExpression() # push index onto stack
         self.advance() # get ]
+        
+        self.writer.writeArithmetic('add') # base+index
+        self.writer.writePop('pointer', 1) # pop into 'that' ptr
+        self.writer.writePush('that', 0) # push *(base+index) onto stack
 
     def compileExpressionList(self):
         nArgs = 0
