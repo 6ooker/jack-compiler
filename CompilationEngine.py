@@ -263,16 +263,34 @@ class CompilationEngine:
                 self.writeArrayIndex()
 
             elif self.nextValueIs("("):
+                nArgs = 1
+                self.writer.writePush('pointer', 0) # push this pointer
+                name = self.className+'.'+name
                 self.advance() # get (
-                self.compileExpressionList()
+                nArgs += self.compileExpressionList() # VM code to push args
                 self.advance() # get )
+                self.writer.writeCall(name, nArgs) # call name nArgs
 
             elif self.nextValueIs("."):
+                stype = self.ST.typeOf(name)
+                nArgs = 0
+                objName = name
                 self.advance() # get '.'
-                self.advance() # get subroutineName
+                tok, name = self.advance() # get subroutineName
+                
+                if stype == None:
+                    name = objName+'.'+name # calling using class name
+                else:
+                    nArgs = 1
+                    kind = self.ST.kindOf(objName)
+                    index = self.ST.indexOf(objName)
+                    self.writer.writePush(segments[kind], index) # push object pointer onto stack
+                    name = self.ST.typeOf(objName)+'.'+name
+                
                 self.advance() # get (
-                self.compileExpressionList()
+                nArgs += self.compileExpressionList() # VM code to push args
                 self.advance() # get )
+                self.writer.writeCall(name, nArgs) # call name nArgs
 
             else:
                 kind = self.ST.kindOf(name)
@@ -299,15 +317,18 @@ class CompilationEngine:
         self.advance() # get ]
 
     def compileExpressionList(self):
-        self.writeNonTerminalOpen("expressionList")
-
+        nArgs = 0
+        
         if self.existExpression():
             self.compileExpression()
+            nArgs = 1
         while self.nextValueIs(","):
             self.advance() # consume ',' symbol
             self.compileExpression()
+            nArgs += 1
+        
+        return nArgs
 
-        self.writeNonTerminalClose()
 
     def existExpression(self):
         return self.existTerm()
