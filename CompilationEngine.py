@@ -52,8 +52,8 @@ class CompilationEngine:
         while self.existClassVarDec():
 
             token, kvalue = self.advance() # get static / field
-            if kvalue is 'static': kvalue = STATIC
-            elif kvalue is 'field': kvalue = FIELD
+            if kvalue == 'static': kvalue = STATIC
+            elif kvalue == 'field': kvalue = FIELD
             token, tvalue = self.advance() # get type
             stype = tvalue
             token, nvalue = self.advance() # get varName
@@ -74,11 +74,11 @@ class CompilationEngine:
         if kwd == 'method':
             self.ST.define('this', self.className, ARG)
         self.advance() # get void or type
-        self.advance() # get subroutineName
+        tok, subName = self.advance() # get subroutineName
         self.advance() #get '('
         self.compileParameterList()
         self.advance() # get ')'
-        self.compileSubroutineBody()
+        self.compileSubroutineBody(subName, kwd)
 
 
     def compileParameterList(self):
@@ -93,14 +93,27 @@ class CompilationEngine:
         if self.nextValueIs(','):
             self.advance() # get ','
 
-    def compileSubroutineBody(self):
+    def compileSubroutineBody(self, kwd):
 
         self.advance() # get '{'
         while self.existVarDec():
             self.compileVarDec()
+        self.writeFunctionDec(kwd)
         self.compileStatements()
         self.advance() # get '}'
 
+    def writeFunctionDec(self, subName, kwd):
+        self.writer.writeFunction(subName, self.ST.varCount(VAR))
+        self.loadThisPtr(kwd)
+        
+    def loadThisPtr(self, kwd):
+        if kwd == 'method':
+            self.writer.writePush('argument', 0)
+            self.writer.writePop('pointer', 0) # set up 'this' pointer to point to new object
+        elif kwd == 'constructor':
+            self.writer.writePush('constant', self.ST.varCount(FIELD)) # object size
+            self.writer.writeCall('Memory.alloc', 1)
+            self.writer.writePop('pointer', 0) # set up 'this' pointer to point to new object
 
     def compileVarDec(self):
 
